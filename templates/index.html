@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anti-Spoofing Packet Verification | Cryptography & Network Security Virtual Lab</title>
+    
+    <!-- Google Fonts: Outfit (Headings), Inter (UI), JetBrains Mono (Code/Network) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Custom Cyber Theme Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="cyber-dark-theme">
+
+    <!-- Top Institutional Lab Bar -->
+    <header class="cyber-topbar">
+        <div class="topbar-brand">
+            <div class="brand-shield">🛡️</div>
+            <div class="brand-info">
+                <span class="lab-name">Anti-Spoofing Packet Verification</span>
+                <span class="lab-sub">Cryptography &amp; Network Security Virtual Laboratory</span>
+            </div>
+        </div>
+        <div class="topbar-actions">
+            <div class="system-status-chip">
+                <span class="pulse-dot"></span>
+                <span class="status-txt">Security Engine: <strong>ACTIVE</strong></span>
+            </div>
+            <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle Navigation">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </header>
+
+    <div class="cyber-layout">
+        <!-- Fixed Left Sidebar: Exactly the 6 Required Sections -->
+        <aside class="cyber-sidebar" id="cyberSidebar">
+            <div class="sidebar-label">LAB SECTIONS</div>
+            <nav class="sidebar-menu">
+                <button class="menu-btn active" data-section="overview" onclick="showSection('overview')">
+                    <span class="btn-icon">🌐</span>
+                    <span class="btn-text">OVERVIEW</span>
+                </button>
+                <button class="menu-btn highlight-btn" data-section="simulator" onclick="showSection('simulator')">
+                    <span class="btn-icon">⚡</span>
+                    <span class="btn-text">SIMULATOR</span>
+                    <span class="live-pill">MAIN</span>
+                </button>
+                <button class="menu-btn" data-section="how-it-works" onclick="showSection('how-it-works')">
+                    <span class="btn-icon">⚙️</span>
+                    <span class="btn-text">HOW IT WORKS</span>
+                </button>
+                <button class="menu-btn" data-section="attack-cases" data-badge="4" onclick="showSection('attack-cases')">
+                    <span class="btn-icon">🧪</span>
+                    <span class="btn-text">ATTACK CASES</span>
+                </button>
+                <button class="menu-btn" data-section="references" onclick="showSection('references')">
+                    <span class="btn-icon">📚</span>
+                    <span class="btn-text">REFERENCES</span>
+                </button>
+                <button class="menu-btn" data-section="about" onclick="showSection('about')">
+                    <span class="btn-icon">ℹ️</span>
+                    <span class="btn-text">ABOUT</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-bottom-info">
+                <div class="meta-tag">BCS703 • ACADEMIC LAB</div>
+                <div class="tech-spec">HMAC-SHA256 • Sequence Checking</div>
+            </div>
+        </aside>
+
+        <!-- Main Content Arena -->
+        <main class="cyber-main">
+
+            <!-- ======================================================== -->
+            <!-- 1. OVERVIEW SECTION -->
+            <!-- ======================================================== -->
+            <section id="overview" class="view-panel active">
+                <div class="panel-header">
+                    <span class="section-tag">Section 01</span>
+                    <h1 class="panel-title">Anti-Spoofing Packet Verification</h1>
+                    <p class="panel-subtitle">Cryptography &amp; Network Security Virtual Laboratory</p>
+                </div>
+
+                <div class="cyber-card highlight-card">
+                    <div class="card-caption">AIM</div>
+                    <p class="aim-statement">
+                        "To implement and demonstrate anti-spoofing packet verification by checking packet authentication, packet integrity, source authenticity, and replay protection."
+                    </p>
+                </div>
+
+                <div class="cyber-card mt-3">
+                    <div class="card-caption">OBJECTIVE</div>
+                    <ul class="cyber-bullet-list">
+                        <li>Verify whether a packet comes from a trusted sender.</li>
+                        <li>Detect modification of packet information.</li>
+                        <li>Detect source IP spoofing.</li>
+                        <li>Detect replay attacks using sequence numbers.</li>
+                        <li>Demonstrate how a packet is verified before it is accepted by the receiver.</li>
+                    </ul>
+                </div>
+
+                <div class="grid-2 mt-3">
+                    <div class="cyber-card">
+                        <div class="def-header">
+                            <span class="def-icon">🎭</span>
+                            <h3>What is Anti-Spoofing?</h3>
+                        </div>
+                        <p class="def-text">
+                            Spoofing is an attack in which an attacker pretends to be a trusted source by using a fake source address. Anti-spoofing techniques use cryptographic verification to ensure the sender identity in the packet header cannot be falsified.
+                        </p>
+                    </div>
+
+                    <div class="cyber-card">
+                        <div class="def-header">
+                            <span class="def-icon">🔍</span>
+                            <h3>What is Packet Verification?</h3>
+                        </div>
+                        <p class="def-text">
+                            Packet verification checks whether the received packet is authentic and whether its information has been changed. It uses secret-key-based cryptographic hashing and sequence counters to reject tampered or replayed packets.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Visual Network Flow Diagram -->
+                <div class="cyber-card mt-3">
+                    <div class="card-caption">TRANSMISSION PATH OVERVIEW</div>
+                    <div class="overview-visual">
+                        <div class="flow-node">
+                            <span class="node-emoji">💻</span>
+                            <strong>SENDER</strong>
+                            <small>192.168.1.10</small>
+                        </div>
+                        <div class="flow-connector">
+                            <div class="connector-line"></div>
+                            <div class="flowing-packet">📦 PACKET</div>
+                            <span class="flow-arrow">&rarr; &rarr;</span>
+                        </div>
+                        <div class="flow-node network-box">
+                            <span class="node-emoji">🌐</span>
+                            <strong>NETWORK</strong>
+                            <small>Channel</small>
+                        </div>
+                        <div class="flow-connector">
+                            <div class="connector-line"></div>
+                            <div class="flowing-packet">📦 PACKET</div>
+                            <span class="flow-arrow">&rarr; &rarr;</span>
+                        </div>
+                        <div class="flow-node">
+                            <span class="node-emoji">🖥️</span>
+                            <strong>RECEIVER</strong>
+                            <small>192.168.1.20</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-cta-row mt-4">
+                    <button class="cyber-btn cyber-btn-primary" onclick="showSection('simulator')">
+                        ⚡ Launch Simulator
+                    </button>
+                    <button class="cyber-btn cyber-btn-secondary" onclick="showSection('how-it-works')">
+                        How It Works &rarr;
+                    </button>
+                </div>
+            </section>
+
+
+            <!-- ======================================================== -->
+            <!-- 2. SIMULATOR SECTION (MAIN & MOST IMPORTANT SECTION) -->
+            <!-- ======================================================== -->
+            <section id="simulator" class="view-panel">
+                <div class="panel-header">
+                    <span class="section-tag highlight-tag">Section 02 • Core Lab Simulator</span>
+                    <h1 class="panel-title">Packet Verification Simulator</h1>
+                    <p class="panel-subtitle">Visually demonstrate packet transmission and multi-stage cryptographic receiver verification.</p>
+                </div>
+
+                <!-- Simulation Control Buttons -->
+                <div class="sim-controls-toolbar">
+                    <button class="sim-btn btn-genuine" id="btnGenuine" onclick="runGenuineSimulation()">
+                        ▶ START GENUINE PACKET
+                    </button>
+                    <button class="sim-btn btn-attack" id="btnModAttack" onclick="runAttack('modified')">
+                        ⚠️ LAUNCH MODIFICATION ATTACK
+                    </button>
+                    <button class="sim-btn btn-attack" id="btnSpoofAttack" onclick="runAttack('spoofed')">
+                        🎭 LAUNCH IP SPOOFING ATTACK
+                    </button>
+                    <button class="sim-btn btn-attack" id="btnReplayAttack" onclick="runAttack('replay')">
+                        🔄 LAUNCH REPLAY ATTACK
+                    </button>
+                    <button class="sim-btn btn-reset" id="btnReset" onclick="resetSimulation()">
+                        ↺ RESET SIMULATION
+                    </button>
+                </div>
+
+                <!-- Live Network Visualization Arena -->
+                <div class="cyber-card sim-arena mt-3">
+                    <div class="arena-header">
+                        <span class="arena-title">NETWORK TRANSMISSION ARENA</span>
+                        <span class="arena-mode-badge" id="arenaModeBadge">READY</span>
+                    </div>
+
+                    <div class="network-track" id="networkTrack">
+                        <!-- SENDER Node -->
+                        <div class="node-card sender-device" id="deviceSender">
+                            <div class="device-icon">💻</div>
+                            <div class="device-name">SENDER</div>
+                            <div class="device-ip">192.168.1.10</div>
+                            <div class="device-status" id="senderStatus">Idle</div>
+                        </div>
+
+                        <!-- Network Transmission Lane -->
+                        <div class="transmission-path">
+                            <div class="path-wire"></div>
+                            
+                            <!-- Attacker Node (Appears during attacks) -->
+                            <div class="attacker-device" id="deviceAttacker" style="display: none;">
+                                <div class="attacker-avatar">🦹</div>
+                                <div class="attacker-title">ATTACKER</div>
+                                <div class="attacker-action-text" id="attackerActionText">Intercepting...</div>
+                            </div>
+
+                            <!-- Animated Traveling Packet -->
+                            <div class="traveling-packet" id="travelingPacket">
+                                <div class="tp-header">📦 PACKET</div>
+                                <div class="tp-row"><span>Src:</span> <strong id="tpSrc">192.168.1.10</strong></div>
+                                <div class="tp-row"><span>Dst:</span> <strong id="tpDest">192.168.1.20</strong></div>
+                                <div class="tp-row"><span>Seq:</span> <strong id="tpSeq">1001</strong></div>
+                                <div class="tp-row"><span>Msg:</span> <strong id="tpMsg">Hello Receiver</strong></div>
+                                <div class="tp-hash"><span>Verif:</span> <code id="tpHash">Computed MAC</code></div>
+                            </div>
+
+                            <div class="transit-labels">
+                                <span>SENDER</span>
+                                <span class="arrow-indicator">&rarr; &rarr;</span>
+                                <span>NETWORK</span>
+                                <span class="arrow-indicator">&rarr; &rarr;</span>
+                                <span>RECEIVER</span>
+                            </div>
+                        </div>
+
+                        <!-- RECEIVER Node -->
+                        <div class="node-card receiver-device" id="deviceReceiver">
+                            <div class="device-icon">🖥️</div>
+                            <div class="device-name">RECEIVER</div>
+                            <div class="device-ip">192.168.1.20</div>
+                            <div class="device-status" id="receiverStatus">Listening</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Packet Information Panel & Verification Pipeline -->
+                <div class="grid-2 mt-3">
+                    
+                    <!-- PACKET INFORMATION PANEL -->
+                    <div class="cyber-card" id="packetInfoCard">
+                        <div class="card-caption">PACKET INFORMATION</div>
+                        <p class="panel-instruction">Fields inspected in-transit across the network channel:</p>
+                        
+                        <div class="packet-specs-list mt-2">
+                            <div class="spec-row" id="fieldSrc">
+                                <span class="spec-label">Source IP:</span>
+                                <span class="spec-val" id="infoSrc">192.168.1.10</span>
+                                <span class="field-alert-tag" id="tagSrc">SPOOFED</span>
+                            </div>
+
+                            <div class="spec-row" id="fieldDest">
+                                <span class="spec-label">Destination IP:</span>
+                                <span class="spec-val" id="infoDest">192.168.1.20</span>
+                            </div>
+
+                            <div class="spec-row" id="fieldSeq">
+                                <span class="spec-label">Sequence Number:</span>
+                                <span class="spec-val" id="infoSeq">1001</span>
+                                <span class="field-alert-tag" id="tagSeq">OLD / REPLAY</span>
+                            </div>
+
+                            <div class="spec-row" id="fieldMsg">
+                                <span class="spec-label">Message:</span>
+                                <span class="spec-val" id="infoMsg">Hello Receiver</span>
+                                <span class="field-alert-tag" id="tagMsg">MODIFIED</span>
+                            </div>
+
+                            <div class="spec-row" id="fieldVerif">
+                                <span class="spec-label">Verification Value:</span>
+                                <span class="spec-val mono-val" id="infoVerif">Generated via secret-key verification</span>
+                            </div>
+
+                            <div class="spec-row">
+                                <span class="spec-label">Verification Status:</span>
+                                <span class="spec-val" id="infoStatus">Awaiting Simulation</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RECEIVER VERIFICATION PIPELINE -->
+                    <div class="cyber-card" id="pipelineCard">
+                        <div class="card-caption">RECEIVER VERIFICATION PIPELINE</div>
+                        <p class="panel-instruction">Receiver executes sequential cryptographic integrity and sequence checks:</p>
+
+                        <div class="pipeline-checklist mt-2">
+                            <!-- Check 1: Authentication -->
+                            <div class="pipeline-step-item" id="pipeAuth">
+                                <div class="step-meta">
+                                    <span class="step-num">1</span>
+                                    <span class="step-title">Authentication Check</span>
+                                </div>
+                                <span class="step-status status-waiting" id="statusAuth">WAITING</span>
+                            </div>
+
+                            <!-- Check 2: Integrity -->
+                            <div class="pipeline-step-item" id="pipeIntegrity">
+                                <div class="step-meta">
+                                    <span class="step-num">2</span>
+                                    <span class="step-title">Integrity Check</span>
+                                </div>
+                                <span class="step-status status-waiting" id="statusIntegrity">WAITING</span>
+                            </div>
+
+                            <!-- Check 3: Sequence Number -->
+                            <div class="pipeline-step-item" id="pipeSeq">
+                                <div class="step-meta">
+                                    <span class="step-num">3</span>
+                                    <span class="step-title">Sequence Number Check</span>
+                                </div>
+                                <span class="step-status status-waiting" id="statusSeq">WAITING</span>
+                            </div>
+                        </div>
+
+                        <!-- Check 4 / Final Verdict Area -->
+                        <div class="verdict-banner mt-3" id="verdictBanner">
+                            <div class="verdict-title" id="verdictTitle">Awaiting Simulation</div>
+                            <div class="verdict-sub" id="verdictSub">Click "START GENUINE PACKET" or choose an attack scenario above.</div>
+                            <div class="verdict-reason mt-2" id="verdictReason" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+
+            <!-- ======================================================== -->
+            <!-- 3. HOW IT WORKS SECTION -->
+            <!-- ======================================================== -->
+            <section id="how-it-works" class="view-panel">
+                <div class="panel-header">
+                    <span class="section-tag">Section 03 • Step-by-Step Flow</span>
+                    <h1 class="panel-title">How It Works</h1>
+                    <p class="panel-subtitle">The complete 6-step anti-spoofing packet verification lifecycle.</p>
+                </div>
+
+                <div class="workflow-tree mt-3">
+                    
+                    <div class="workflow-step">
+                        <div class="ws-badge">Step 1</div>
+                        <div class="ws-content">
+                            <h3>Packet Creation</h3>
+                            <p>The sender creates a packet containing source IP, destination IP, message and sequence number.</p>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow">&darr;</div>
+
+                    <div class="workflow-step">
+                        <div class="ws-badge">Step 2</div>
+                        <div class="ws-content">
+                            <h3>Verification Value Generation</h3>
+                            <p>A secret key and hash function are used to create a verification value for the packet.</p>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow">&darr;</div>
+
+                    <div class="workflow-step">
+                        <div class="ws-badge">Step 3</div>
+                        <div class="ws-content">
+                            <h3>Packet Transmission</h3>
+                            <p>The packet travels from the sender to the receiver through the network.</p>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow">&darr;</div>
+
+                    <div class="workflow-step">
+                        <div class="ws-badge">Step 4</div>
+                        <div class="ws-content">
+                            <h3>Authentication and Integrity Check</h3>
+                            <p>The receiver calculates the expected verification value and compares it with the received value.</p>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow">&darr;</div>
+
+                    <div class="workflow-step">
+                        <div class="ws-badge">Step 5</div>
+                        <div class="ws-content">
+                            <h3>Sequence Number Check</h3>
+                            <p>The receiver checks whether the sequence number is new. An already-used sequence number indicates a possible replay attack.</p>
+                        </div>
+                    </div>
+
+                    <div class="workflow-arrow">&darr;</div>
+
+                    <div class="workflow-step verdict-step">
+                        <div class="ws-badge">Step 6</div>
+                        <div class="ws-content">
+                            <h3>Final Decision</h3>
+                            <p>If authentication, integrity and sequence checks are successful: <strong class="text-green">PACKET ACCEPTED</strong>. Otherwise: <strong class="text-red">PACKET REJECTED</strong>.</p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="action-cta-row mt-4">
+                    <button class="cyber-btn cyber-btn-primary" onclick="showSection('simulator')">
+                        ⚡ Test In Simulator
+                    </button>
+                    <button class="cyber-btn cyber-btn-secondary" onclick="showSection('attack-cases')">
+                        View Attack Cases &rarr;
+                    </button>
+                </div>
+            </section>
+
+
+            <!-- ======================================================== -->
+            <!-- 4. ATTACK CASES SECTION -->
+            <!-- ======================================================== -->
+            <section id="attack-cases" class="view-panel">
+                <div class="panel-header">
+                    <span class="section-tag">Section 04 • Security Analysis</span>
+                    <h1 class="panel-title">Attack Cases &amp; Scenarios</h1>
+                    <p class="panel-subtitle">Comparative evaluation of genuine traffic against three primary network attack vectors.</p>
+                </div>
+
+                <div class="grid-2 mt-3">
+                    
+                    <!-- Card 1: Genuine Packet -->
+                    <div class="cyber-card case-card genuine-case">
+                        <div class="case-header">
+                            <span class="case-num">Case 1</span>
+                            <h3>Genuine Packet</h3>
+                            <span class="verdict-tag tag-pass">ACCEPTED</span>
+                        </div>
+                        <div class="case-body">
+                            <div class="case-prop">
+                                <strong>What happens:</strong>
+                                <span>The authorized sender transmits an untampered packet with a new sequence number.</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>What the attacker changes:</strong>
+                                <span>None (No attacker intervention).</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>What the receiver detects:</strong>
+                                <span>Verification value matches; sequence number is fresh.</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>Final result:</strong>
+                                <span class="text-green">✓ PACKET ACCEPTED</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Packet Modification -->
+                    <div class="cyber-card case-card attack-case">
+                        <div class="case-header">
+                            <span class="case-num">Case 2</span>
+                            <h3>Packet Modification</h3>
+                            <span class="verdict-tag tag-fail">REJECTED</span>
+                        </div>
+                        <div class="case-body">
+                            <div class="case-prop">
+                                <strong>What happens:</strong>
+                                <span>The attacker intercepts the packet in transit and alters the message content.</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>What the attacker changes:</strong>
+                                <span>Changes message from "Hello Receiver" to "Transfer Rs.50000 to attacker" while keeping original verification value.</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>What the receiver detects:</strong>
+                                <span>Computed verification value does not match received value. Integrity check fails.</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>Final result:</strong>
+                                <span class="text-red">✗ PACKET REJECTED (Reason: Packet information was modified.)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: IP Spoofing -->
+                    <div class="cyber-card case-card attack-case">
+                        <div class="case-header">
+                            <span class="case-num">Case 3</span>
+                            <h3>IP Spoofing</h3>
+                            <span class="verdict-tag tag-fail">REJECTED</span>
+                        </div>
+                        <div class="case-body">
+                            <div class="case-prop">
+                                <strong>What happens:</strong>
+                                <span>Attacker attempts to impersonate an authorized host by forging the Source IP.</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>What the attacker changes:</strong>
+                                <span>Changes Source IP from 192.168.1.10 to 10.0.0.99 while keeping original verification value.</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>What the receiver detects:</strong>
+                                <span>Source IP is included in verification value generation; mismatch detected. Source identity cannot be verified.</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>Final result:</strong>
+                                <span class="text-red">✗ PACKET REJECTED (Reason: Source identity could not be verified.)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Replay Attack -->
+                    <div class="cyber-card case-card attack-case">
+                        <div class="case-header">
+                            <span class="case-num">Case 4</span>
+                            <h3>Replay Attack</h3>
+                            <span class="verdict-tag tag-fail">REJECTED</span>
+                        </div>
+                        <div class="case-body">
+                            <div class="case-prop">
+                                <strong>What happens:</strong>
+                                <span>Attacker captures a genuine packet and retransmits the same packet again without changes.</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>What the attacker changes:</strong>
+                                <span>Nothing. The packet and verification value remain unmodified.</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>What the receiver detects:</strong>
+                                <span>Verification value is correct, but sequence number 1001 is already processed and not new.</span>
+                            </div>
+                            <div class="case-prop">
+                                <strong>Final result:</strong>
+                                <span class="text-red">✗ PACKET REJECTED (Reason: Old packet was sent again.)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="action-cta-row mt-4">
+                    <button class="cyber-btn cyber-btn-primary" onclick="showSection('simulator')">
+                        ⚡ Test These In Simulator
+                    </button>
+                    <button class="cyber-btn cyber-btn-secondary" onclick="showSection('references')">
+                        References &rarr;
+                    </button>
+                </div>
+            </section>
+
+
+            <!-- ======================================================== -->
+            <!-- 5. REFERENCES SECTION -->
+            <!-- ======================================================== -->
+            <section id="references" class="view-panel">
+                <div class="panel-header">
+                    <span class="section-tag">Section 05 • Course References</span>
+                    <h1 class="panel-title">References</h1>
+                    <p class="panel-subtitle">Academic syllabus citations and cryptographic standards.</p>
+                </div>
+
+                <div class="cyber-card mt-3">
+                    <div class="card-caption">COURSE LITERATURE</div>
+                    <ul class="styled-ref-list">
+                        <li>
+                            <strong>Cryptography and Network Security course textbook</strong>
+                        </li>
+                        <li>
+                            <strong>Module 3: Cryptographic Hash Functions</strong>
+                        </li>
+                        <li>
+                            <strong>Message Authentication</strong>
+                        </li>
+                        <li>
+                            <strong>HMAC / keyed hash concept</strong>
+                        </li>
+                        <li>
+                            <strong>SHA-256</strong>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="action-cta-row mt-4">
+                    <button class="cyber-btn cyber-btn-primary" onclick="showSection('about')">
+                        About Project &rarr;
+                    </button>
+                    <button class="cyber-btn cyber-btn-secondary" onclick="showSection('simulator')">
+                        ⚡ Open Simulator
+                    </button>
+                </div>
+            </section>
+
+
+            <!-- ======================================================== -->
+            <!-- 6. ABOUT SECTION -->
+            <!-- ======================================================== -->
+            <section id="about" class="view-panel">
+                <div class="panel-header">
+                    <span class="section-tag">Section 06 • Project Details</span>
+                    <h1 class="panel-title">About</h1>
+                    <p class="panel-subtitle">Academic virtual laboratory demonstration details.</p>
+                </div>
+
+                <div class="grid-2 mt-3">
+                    
+                    <div class="cyber-card">
+                        <div class="card-caption">PROJECT METADATA</div>
+                        <div class="meta-item-list">
+                            <div class="meta-row">
+                                <span class="mr-label">Project:</span>
+                                <strong class="mr-val">Implement Anti-Spoofing Packet Verification</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span class="mr-label">Subject:</span>
+                                <strong class="mr-val">Cryptography and Network Security</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span class="mr-label">Technology:</span>
+                                <strong class="mr-val">Python, Flask, HTML, CSS, JavaScript</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span class="mr-label">Purpose:</span>
+                                <strong class="mr-val">Academic virtual laboratory demonstration.</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cyber-card viva-box">
+                        <div class="card-caption">COLLEGE PROJECT &amp; VIVA DEMO</div>
+                        <p class="viva-desc">
+                            This virtual laboratory is designed specifically for academic evaluation and viva demonstration.
+                        </p>
+                        <div class="viva-highlights mt-2">
+                            <div class="vh-item">
+                                <span class="vh-tick">✓</span>
+                                <span>Real Python HMAC-SHA256 cryptographic backend (<code>anti_spoofing.py</code>).</span>
+                            </div>
+                            <div class="vh-item">
+                                <span class="vh-tick">✓</span>
+                                <span>Interactive packet animation from sender through network to receiver.</span>
+                            </div>
+                            <div class="vh-item">
+                                <span class="vh-tick">✓</span>
+                                <span>Clear demonstration of modification, IP spoofing, and replay attack defenses.</span>
+                            </div>
+                            <div class="vh-item">
+                                <span class="vh-tick">✓</span>
+                                <span>Fast, responsive, single-page presentation without reloading.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="action-cta-row mt-4">
+                    <button class="cyber-btn cyber-btn-primary" onclick="showSection('simulator')">
+                        ⚡ Launch Simulator
+                    </button>
+                    <button class="cyber-btn cyber-btn-secondary" onclick="showSection('overview')">
+                        ← Back to Overview
+                    </button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Script Controller -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
