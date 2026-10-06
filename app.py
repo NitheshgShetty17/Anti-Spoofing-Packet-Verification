@@ -1,5 +1,4 @@
 import sys
-
 if hasattr(sys.stdout, "reconfigure"):
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -11,26 +10,11 @@ import hmac
 import hashlib
 import anti_spoofing
 
-
-# ============================================================
-# FLASK APPLICATION
-# Explicitly define templates and static folders for deployment
-# ============================================================
-
-app = Flask(
-    __name__,
-    static_folder="static",
-    template_folder="templates"
-)
-
+app = Flask(__name__)
 
 # Shared Secret Key from existing anti_spoofing.py
 SECRET_KEY = anti_spoofing.KEY
 
-
-# ============================================================
-# HOME PAGE
-# ============================================================
 
 @app.route("/")
 def home():
@@ -38,32 +22,19 @@ def home():
     return render_template("index.html")
 
 
-# ============================================================
-# CREATE PACKET
-# ============================================================
-
 @app.route("/api/create_packet", methods=["POST"])
 def create_packet():
-    """Generates an authentic packet using HMAC-SHA256."""
-
+    """Generates an authentic packet using HMAC-SHA256 from anti_spoofing.py."""
     data = request.get_json() or {}
-
     src = data.get("src", "192.168.1.10").strip() or "192.168.1.10"
     dest = data.get("dest", "192.168.1.20").strip() or "192.168.1.20"
-
     try:
         seq = int(data.get("seq", 1001))
     except (ValueError, TypeError):
         seq = 1001
-
     msg = data.get("msg", "Hello Receiver").strip() or "Hello Receiver"
 
-    mac = anti_spoofing.make_hmac(
-        src,
-        dest,
-        seq,
-        msg
-    )
+    mac = anti_spoofing.make_hmac(src, dest, seq, msg)
 
     return jsonify({
         "src": src,
@@ -75,428 +46,169 @@ def create_packet():
     })
 
 
-# ============================================================
-# VERIFY PACKET
-# ============================================================
-
 @app.route("/api/verify", methods=["POST"])
 def verify_packet():
     """
-    Verifies packet authenticity, integrity,
-    source identity and replay protection.
+    Verifies a packet against HMAC authenticity, payload integrity,
+    and sequence freshness.
+    Uses the exact verification logic from anti_spoofing.py.
     """
-
     data = request.get_json() or {}
-
     scenario_type = data.get("scenario", "custom")
 
     src = data.get("src") or data.get("source_ip") or ""
     dest = data.get("dest") or data.get("destination_ip") or ""
-
     try:
-        seq = int(
-            data.get("seq")
-            or data.get("sequence")
-            or 0
-        )
+        seq = int(data.get("seq") or data.get("sequence") or 0)
     except (ValueError, TypeError):
         seq = 0
-
     msg = data.get("msg") or data.get("payload") or ""
+    received_mac = (data.get("mac") or "").strip()
 
-    received_mac = (
-        data.get("mac") or ""
-    ).strip()
+    # Create expected HMAC using receiver's copy of the secret key
+    expected_mac = anti_spoofing.make_hmac(src, dest, seq, msg)
 
+    # 1. Authentication and Integrity check (constant-time comparison)
+    auth = hmac.compare_digest(expected_mac, received_mac)
 
-    # Generate expected HMAC
-    expected_mac = anti_spoofing.make_hmac(
-        src,
-        dest,
-        seq,
-        msg
-    )
-
-
-    # --------------------------------------------------------
-    # 1. Authentication + Integrity Check
-    # --------------------------------------------------------
-
-    auth = hmac.compare_digest(
-        expected_mac,
-        received_mac
-    )
-
-
-    # --------------------------------------------------------
-    # 2. Replay Attack Protection
-    # --------------------------------------------------------
-
+    # 2. Sequence check for replay attack protection
     current_last_seq = anti_spoofing.last_sequence
-
     sequence_valid = seq > current_last_seq
 
-
-    # --------------------------------------------------------
-    # Final Decision
-    # --------------------------------------------------------
-
     accepted = auth and sequence_valid
-
 
     if accepted:
         anti_spoofing.last_sequence = seq
 
-
-    # --------------------------------------------------------
-    # Reason for Verdict
-    # --------------------------------------------------------
-
+    # Tailored specific academic reasons per assignment specification
     if accepted:
-
         reason = "All checks passed. Packet accepted."
-
     elif not sequence_valid:
-
         reason = "Old packet was sent again."
-
     elif scenario_type == "spoofed" or src != "192.168.1.10":
-
         reason = "Source identity could not be verified."
-
     elif scenario_type == "modified" or msg != "Hello Receiver":
-
         reason = "Packet information was modified."
-
     else:
-
         reason = "Authentication and integrity verification failed."
 
-
     return jsonify({
-
         "accepted": accepted,
-
-        "authentication":
-            "PASS" if auth else "FAIL",
-
-        "integrity":
-            "PASS" if auth else "FAIL",
-
-        "sequence_valid":
-            "VALID" if sequence_valid else "FAIL",
-
+        "authentication": "PASS" if auth else "FAIL",
+        "integrity": "PASS" if auth else "FAIL",
+        "sequence_valid": "VALID" if sequence_valid else "FAIL",
         "expected_mac": expected_mac,
-
         "received_mac": received_mac,
-
-        "mac_preview":
-            received_mac[:16]
-            + "..."
-            + received_mac[-8:]
-            if received_mac
-            else "",
-
-        "previous_sequence":
-            current_last_seq,
-
-        "current_sequence":
-            anti_spoofing.last_sequence,
-
-        "verdict":
-            "PACKET ACCEPTED"
-            if accepted
-            else "PACKET REJECTED",
-
-        "reason":
-            reason
+        "mac_preview": received_mac[:16] + "..." + received_mac[-8:] if received_mac else "",
+        "previous_sequence": current_last_seq,
+        "current_sequence": anti_spoofing.last_sequence,
+        "verdict": "PACKET ACCEPTED" if accepted else "PACKET REJECTED",
+        "reason": reason
     })
 
-
-# ============================================================
-# ATTACK / DEMONSTRATION SCENARIOS
-# ============================================================
 
 @app.route("/api/scenario/<scenario>")
 def scenario(scenario):
     """
-    Provides packet values for classroom demonstration.
+    Returns packet specifications and scenario parameters
+    for standard classroom viva demonstration cases.
     """
-
     src = "192.168.1.10"
     dest = "192.168.1.20"
     seq = 1001
     msg = "Hello Receiver"
-
-
-    genuine_mac = anti_spoofing.make_hmac(
-        src,
-        dest,
-        seq,
-        msg
-    )
-
-
-    # --------------------------------------------------------
-    # GENUINE PACKET
-    # --------------------------------------------------------
+    genuine_mac = anti_spoofing.make_hmac(src, dest, seq, msg)
 
     if scenario == "genuine":
-
         return jsonify({
-
-            "scenario":
-                "genuine",
-
-            "title":
-                "Genuine Packet",
-
+            "scenario": "genuine",
+            "title": "Genuine Packet",
             "packet": {
-
-                "src":
-                    src,
-
-                "dest":
-                    dest,
-
-                "seq":
-                    seq,
-
-                "msg":
-                    msg,
-
-                "mac":
-                    genuine_mac,
-
-                "scenario":
-                    "genuine"
+                "src": src,
+                "dest": dest,
+                "seq": seq,
+                "msg": msg,
+                "mac": genuine_mac,
+                "scenario": "genuine"
             },
-
-            "highlight_field":
-                None,
-
-            "expected_verdict":
-                "PACKET ACCEPTED"
+            "highlight_field": None,
+            "expected_verdict": "PACKET ACCEPTED"
         })
 
-
-    # --------------------------------------------------------
-    # PACKET MODIFICATION ATTACK
-    # --------------------------------------------------------
-
-    elif scenario in [
-        "modified",
-        "modification"
-    ]:
-
-        tampered_msg = (
-            "Transfer Rs.50000 to attacker"
-        )
-
-
+    elif scenario in ["modified", "modification"]:
+        tampered_msg = "Transfer Rs.50000 to attacker"
         return jsonify({
-
-            "scenario":
-                "modified",
-
-            "title":
-                "Packet Modification Attack",
-
-            "original_msg":
-                msg,
-
-            "modified_msg":
-                tampered_msg,
-
+            "scenario": "modified",
+            "title": "Packet Modification Attack",
+            "original_msg": msg,
+            "modified_msg": tampered_msg,
             "packet": {
-
-                "src":
-                    src,
-
-                "dest":
-                    dest,
-
-                "seq":
-                    seq,
-
-                "msg":
-                    tampered_msg,
-
-                # Attacker keeps original HMAC
-                "mac":
-                    genuine_mac,
-
-                "scenario":
-                    "modified"
+                "src": src,
+                "dest": dest,
+                "seq": seq,
+                "msg": tampered_msg,
+                "mac": genuine_mac,  # Attacker keeps original HMAC
+                "scenario": "modified"
             },
-
-            "highlight_field":
-                "msg",
-
-            "expected_verdict":
-                "PACKET REJECTED",
-
-            "reason":
-                "Packet information was modified."
+            "highlight_field": "msg",
+            "expected_verdict": "PACKET REJECTED",
+            "reason": "Packet information was modified."
         })
 
-
-    # --------------------------------------------------------
-    # SOURCE IP SPOOFING ATTACK
-    # --------------------------------------------------------
-
-    elif scenario in [
-        "spoofed",
-        "spoofing"
-    ]:
-
+    elif scenario in ["spoofed", "spoofing"]:
         spoofed_src = "10.0.0.99"
-
-
         return jsonify({
-
-            "scenario":
-                "spoofed",
-
-            "title":
-                "Source IP Spoofing Attack",
-
-            "original_src":
-                src,
-
-            "spoofed_src":
-                spoofed_src,
-
+            "scenario": "spoofed",
+            "title": "Source IP Spoofing Attack",
+            "original_src": src,
+            "spoofed_src": spoofed_src,
             "packet": {
-
-                "src":
-                    spoofed_src,
-
-                "dest":
-                    dest,
-
-                "seq":
-                    seq,
-
-                "msg":
-                    msg,
-
-                # Attacker keeps original HMAC
-                "mac":
-                    genuine_mac,
-
-                "scenario":
-                    "spoofed"
+                "src": spoofed_src,
+                "dest": dest,
+                "seq": seq,
+                "msg": msg,
+                "mac": genuine_mac,  # Attacker keeps original HMAC
+                "scenario": "spoofed"
             },
-
-            "highlight_field":
-                "src",
-
-            "expected_verdict":
-                "PACKET REJECTED",
-
-            "reason":
-                "Source identity could not be verified."
+            "highlight_field": "src",
+            "expected_verdict": "PACKET REJECTED",
+            "reason": "Source identity could not be verified."
         })
 
-
-    # --------------------------------------------------------
-    # REPLAY ATTACK
-    # --------------------------------------------------------
-
-    elif scenario in [
-        "replay",
-        "replayed"
-    ]:
-
+    elif scenario in ["replay", "replayed"]:
         return jsonify({
-
-            "scenario":
-                "replay",
-
-            "title":
-                "Replay Attack",
-
+            "scenario": "replay",
+            "title": "Replay Attack",
             "packet": {
-
-                "src":
-                    src,
-
-                "dest":
-                    dest,
-
-                "seq":
-                    seq,
-
-                "msg":
-                    msg,
-
-                "mac":
-                    genuine_mac,
-
-                "scenario":
-                    "replay"
+                "src": src,
+                "dest": dest,
+                "seq": seq,
+                "msg": msg,
+                "mac": genuine_mac,
+                "scenario": "replay"
             },
-
-            "highlight_field":
-                "seq",
-
-            "expected_verdict":
-                "PACKET REJECTED",
-
-            "reason":
-                "Old packet was sent again."
+            "highlight_field": "seq",
+            "expected_verdict": "PACKET REJECTED",
+            "reason": "Old packet was sent again."
         })
 
+    return jsonify({"error": "Invalid scenario name"}), 400
 
-    return jsonify({
-        "error":
-            "Invalid scenario name"
-    }), 400
-
-
-# ============================================================
-# RESET SIMULATION
-# ============================================================
 
 @app.route("/api/reset", methods=["POST"])
 def reset():
-    """Reset sequence tracker."""
-
+    """Resets the sequence tracker state to initial zero."""
     anti_spoofing.reset_sequence()
-
     return jsonify({
-
-        "status":
-            "success",
-
-        "message":
-            "Simulation state reset successfully.",
-
-        "last_sequence":
-            anti_spoofing.last_sequence
+        "status": "success",
+        "message": "Simulation state reset successfully.",
+        "last_sequence": anti_spoofing.last_sequence
     })
 
 
-# ============================================================
-# LOCAL DEVELOPMENT
-# ============================================================
-
 if __name__ == "__main__":
-
     print("=" * 60)
-
-    print(
-        "ANTI-SPOOFING PACKET VERIFICATION VIRTUAL LAB"
-    )
-
-    print(
-        "Server running at: http://127.0.0.1:5000"
-    )
-
+    print("ANTI-SPOOFING PACKET VERIFICATION VIRTUAL LAB")
+    print("Server running at: http://127.0.0.1:5000")
     print("=" * 60)
-
-    app.run(
-        debug=True,
-        port=5000
-    )
+    app.run(debug=True, port=5000)
