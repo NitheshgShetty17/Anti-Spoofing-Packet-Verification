@@ -83,10 +83,38 @@ function initMobileDrawer() {
 }
 
 /* ==========================================================================
+   Simulator Button Selection Manager
+   ========================================================================== */
+const SIM_OPTION_BUTTON_IDS = ['btnGenuine', 'btnModAttack', 'btnSpoofAttack', 'btnReplayAttack'];
+
+function setSelectedSimulationButton(selectedId) {
+    SIM_OPTION_BUTTON_IDS.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            if (id === selectedId) {
+                btn.classList.add('selected');
+            } else {
+                btn.classList.remove('selected');
+            }
+        }
+    });
+}
+
+function clearSelectedSimulationButtons() {
+    SIM_OPTION_BUTTON_IDS.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.classList.remove('selected');
+        }
+    });
+}
+
+/* ==========================================================================
    1. GENUINE PACKET SIMULATION
    ========================================================================== */
 async function runGenuineSimulation() {
     if (simState.isRunning) return;
+    setSelectedSimulationButton('btnGenuine');
     simState.isRunning = true;
 
     // Reset visual state before starting
@@ -144,6 +172,14 @@ async function runGenuineSimulation() {
    ========================================================================== */
 async function runAttack(attackType) {
     if (simState.isRunning) return;
+    const attackBtnMap = {
+        'modified': 'btnModAttack',
+        'spoofed': 'btnSpoofAttack',
+        'replay': 'btnReplayAttack'
+    };
+    if (attackBtnMap[attackType]) {
+        setSelectedSimulationButton(attackBtnMap[attackType]);
+    }
     simState.isRunning = true;
 
     try {
@@ -306,7 +342,7 @@ function renderFinalVerdict(result) {
         reasonBox.style.display = 'inline-block';
         reasonBox.textContent = `Reason: "${result.reason}"`;
         document.getElementById('infoStatus').textContent = 'REJECTED';
-        document.getElementById('infoStatus').style.color = '#ef4444';
+        document.getElementById('infoStatus').style.color = '#ffb000';
     }
 }
 
@@ -460,6 +496,7 @@ function resetVisualElementsOnly() {
    ========================================================================== */
 async function resetSimulation() {
     try {
+        clearSelectedSimulationButtons();
         await fetch('/api/reset', { method: 'POST' });
         simState.hasAcceptedInitialGenuine = false;
         simState.lastSequenceWatermark = 0;
@@ -475,7 +512,7 @@ async function resetSimulation() {
         document.getElementById('infoMsg').textContent = 'Hello Receiver';
         document.getElementById('infoVerif').textContent = 'Generated via secret-key verification';
         document.getElementById('infoStatus').textContent = 'Awaiting Simulation';
-        document.getElementById('infoStatus').style.color = '#94a3b8';
+        document.getElementById('infoStatus').style.color = '#e2e8f0';
 
         setDeviceStatus('deviceSender', 'senderStatus', 'Idle', false);
         setDeviceStatus('deviceReceiver', 'receiverStatus', 'Listening', false);
