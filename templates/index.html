@@ -61,6 +61,10 @@
                     <span class="btn-icon">📚</span>
                     <span class="btn-text">REFERENCES</span>
                 </button>
+                <button class="menu-btn" data-section="summary" onclick="showSection('summary')">
+                    <span class="btn-icon">📋</span>
+                    <span class="btn-text">SUMMARY</span>
+                </button>
                 <button class="menu-btn" data-section="about" onclick="showSection('about')">
                     <span class="btn-icon">ℹ️</span>
                     <span class="btn-text">ABOUT</span>
@@ -603,11 +607,110 @@
 
 
             <!-- ======================================================== -->
-            <!-- 6. ABOUT SECTION -->
+            <!-- 6. SUMMARY SECTION -->
+            <!-- ======================================================== -->
+            <section id="summary" class="view-panel">
+                <div class="panel-header">
+                    <span class="section-tag">Section 06 • Project Summary</span>
+                    <h1 class="panel-title">Summary</h1>
+                    <p class="panel-subtitle">Concise project overview, security architecture, and operational summary.</p>
+                </div>
+
+                <!-- PROJECT TITLE & PURPOSE -->
+                <div class="cyber-card highlight-card">
+                    <div class="card-caption">PROJECT TITLE</div>
+                    <h2 class="aim-statement" style="font-size: 1.45rem; font-weight: 700; color: #ffffff; margin-bottom: 1rem;">
+                        Anti-Spoofing Packet Verification
+                    </h2>
+                    <div class="card-caption">PURPOSE</div>
+                    <p style="font-size: 1.05rem; color: #ffffff; line-height: 1.6; font-weight: 500;">
+                        A system for verifying network packets and detecting spoofing-related attacks.
+                    </p>
+                </div>
+
+                <!-- TECHNOLOGIES USED & MAIN SECURITY FEATURES -->
+                <div class="grid-2 mt-3">
+                    <div class="cyber-card">
+                        <div class="card-caption">TECHNOLOGIES USED</div>
+                        <ul class="cyber-bullet-list">
+                            <li><strong style="color: #ffffff;">Python</strong></li>
+                            <li><strong style="color: #ffffff;">Flask</strong></li>
+                            <li><strong style="color: #ffffff;">HMAC-SHA256</strong></li>
+                            <li><strong style="color: #ffffff;">HTML</strong></li>
+                            <li><strong style="color: #ffffff;">CSS</strong></li>
+                            <li><strong style="color: #ffffff;">JavaScript</strong></li>
+                        </ul>
+                    </div>
+
+                    <div class="cyber-card">
+                        <div class="card-caption">MAIN SECURITY FEATURES</div>
+                        <ul class="cyber-bullet-list">
+                            <li><span style="color: #ffffff;">HMAC-based packet verification</span></li>
+                            <li><span style="color: #ffffff;">Packet modification detection</span></li>
+                            <li><span style="color: #ffffff;">IP spoofing detection</span></li>
+                            <li><span style="color: #ffffff;">Replay attack detection using sequence numbers</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- WORKING -->
+                <div class="cyber-card mt-3">
+                    <div class="card-caption">WORKING</div>
+                    <ul class="cyber-bullet-list">
+                        <li><span style="color: #ffffff;">Sender creates the packet.</span></li>
+                        <li><span style="color: #ffffff;">A sequence number is assigned.</span></li>
+                        <li><span style="color: #ffffff;">HMAC-SHA256 is generated using the secret key and packet information.</span></li>
+                        <li><span style="color: #ffffff;">Receiver verifies the HMAC.</span></li>
+                        <li><span style="color: #ffffff;">Sequence number is checked for replay attacks.</span></li>
+                        <li><span style="color: #ffffff;">Genuine packets are accepted.</span></li>
+                        <li><span style="color: #ffffff;">Invalid or replayed packets are rejected.</span></li>
+                    </ul>
+                </div>
+
+                <!-- ATTACK CASES -->
+                <div class="cyber-card mt-3">
+                    <div class="card-caption">ATTACK CASES</div>
+                    <div class="summary-attack-grid mt-2">
+                        <div class="summary-case-row case-accepted">
+                            <span class="summary-case-name">Genuine Packet</span>
+                            <span class="summary-case-arrow">→</span>
+                            <span class="summary-verdict-badge verdict-accept">ACCEPTED</span>
+                        </div>
+                        <div class="summary-case-row case-rejected">
+                            <span class="summary-case-name">Modification Attack</span>
+                            <span class="summary-case-arrow">→</span>
+                            <span class="summary-verdict-badge verdict-reject">REJECTED</span>
+                        </div>
+                        <div class="summary-case-row case-rejected">
+                            <span class="summary-case-name">IP Spoofing Attack</span>
+                            <span class="summary-case-arrow">→</span>
+                            <span class="summary-verdict-badge verdict-reject">REJECTED</span>
+                        </div>
+                        <div class="summary-case-row case-rejected">
+                            <span class="summary-case-name">Replay Attack</span>
+                            <span class="summary-case-arrow">→</span>
+                            <span class="summary-verdict-badge verdict-reject">REJECTED</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-cta-row mt-4">
+                    <button class="cyber-btn cyber-btn-primary" onclick="showSection('simulator')">
+                        ⚡ Open Simulator
+                    </button>
+                    <button class="cyber-btn cyber-btn-secondary" onclick="showSection('about')">
+                        About Project &rarr;
+                    </button>
+                </div>
+            </section>
+
+
+            <!-- ======================================================== -->
+            <!-- 7. ABOUT SECTION -->
             <!-- ======================================================== -->
             <section id="about" class="view-panel">
                 <div class="panel-header">
-                    <span class="section-tag">Section 06 • Project Details</span>
+                    <span class="section-tag">Section 07 • Project Details</span>
                     <h1 class="panel-title">About</h1>
                     <p class="panel-subtitle">Academic virtual laboratory demonstration details.</p>
                 </div>

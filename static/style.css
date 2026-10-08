@@ -1252,6 +1252,76 @@ body.cyber-dark-theme {
 }
 
 /* ==========================================================================
+   SUMMARY SECTION
+   ========================================================================== */
+.summary-attack-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.summary-case-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.25rem;
+    background: #0b1222;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.summary-case-row:hover {
+    transform: translateX(4px);
+}
+
+.summary-case-row.case-accepted {
+    border-color: rgba(16, 185, 129, 0.45);
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.summary-case-row.case-rejected {
+    border-color: rgba(255, 176, 0, 0.45);
+    background: rgba(255, 176, 0, 0.08);
+}
+
+.summary-case-name {
+    font-family: var(--font-heading);
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.summary-case-arrow {
+    color: var(--cyan);
+    font-weight: 700;
+    font-size: 1.15rem;
+}
+
+.summary-verdict-badge {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 0.35rem 0.95rem;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+}
+
+.summary-verdict-badge.verdict-accept {
+    color: #ffffff;
+    background: #10b981;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+
+.summary-verdict-badge.verdict-reject {
+    color: #ffffff;
+    background: #ffb000;
+    box-shadow: 0 0 12px rgba(255, 176, 0, 0.35);
+}
+
+/* ==========================================================================
    ABOUT SECTION
    ========================================================================== */
 .meta-item-list {
