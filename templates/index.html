@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anti-Spoofing Packet Verification | Cryptography & Network Security Virtual Lab</title>
+    <title>Implementation of Anti-Spoofing Packet Verification | Cryptography & Network Security Virtual Lab</title>
     
     <!-- Google Fonts: Outfit (Headings), Inter (UI), JetBrains Mono (Code/Network) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Custom Cyber Theme Stylesheet -->
+    <!-- Custom Classroom White Theme Stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="cyber-dark-theme">
+<body class="cyber-light-theme">
 
     <!-- Top Institutional Lab Bar -->
     <header class="cyber-topbar">
         <div class="topbar-brand">
             <div class="brand-shield">🛡️</div>
             <div class="brand-info">
-                <span class="lab-name">Anti-Spoofing Packet Verification</span>
+                <span class="lab-name">Implementation of Anti-Spoofing Packet Verification</span>
                 <span class="lab-sub">Cryptography &amp; Network Security Virtual Laboratory</span>
             </div>
         </div>
@@ -86,7 +86,7 @@
             <section id="overview" class="view-panel active">
                 <div class="panel-header">
                     <span class="section-tag">Section 01</span>
-                    <h1 class="panel-title">Anti-Spoofing Packet Verification</h1>
+                    <h1 class="panel-title">Implementation of Anti-Spoofing Packet Verification</h1>
                     <p class="panel-subtitle">Cryptography &amp; Network Security Virtual Laboratory</p>
                 </div>
 
@@ -180,26 +180,86 @@
                 <div class="panel-header">
                     <span class="section-tag highlight-tag">Section 02 • Core Lab Simulator</span>
                     <h1 class="panel-title">Packet Verification Simulator</h1>
-                    <p class="panel-subtitle">Visually demonstrate packet transmission and multi-stage cryptographic receiver verification.</p>
+                    <p class="panel-subtitle">Enter custom packet details to generate cryptographic HMAC-SHA256 tokens and test packet verification across 4 scenarios.</p>
                 </div>
 
-                <!-- Simulation Control Buttons -->
-                <div class="sim-controls-toolbar">
-                    <button class="sim-btn btn-genuine" id="btnGenuine" onclick="runGenuineSimulation()">
-                        ▶ START GENUINE PACKET
-                    </button>
-                    <button class="sim-btn btn-attack" id="btnModAttack" onclick="runAttack('modified')">
-                        ⚠️ LAUNCH MODIFICATION ATTACK
-                    </button>
-                    <button class="sim-btn btn-attack" id="btnSpoofAttack" onclick="runAttack('spoofed')">
-                        🎭 LAUNCH IP SPOOFING ATTACK
-                    </button>
-                    <button class="sim-btn btn-attack" id="btnReplayAttack" onclick="runAttack('replay')">
-                        🔄 LAUNCH REPLAY ATTACK
-                    </button>
-                    <button class="sim-btn btn-reset" id="btnReset" onclick="resetSimulation()">
-                        ↺ RESET SIMULATION
-                    </button>
+                <!-- USER PACKET CONFIGURATION CARD -->
+                <div class="cyber-card sim-config-card">
+                    <div class="config-header">
+                        <div>
+                            <div class="card-caption">SIMULATOR INPUT CONFIGURATION</div>
+                            <h3 class="config-title">Enter Custom Packet Details</h3>
+                            <p class="config-subtitle">Configure your network packet parameters. The cryptographic HMAC verification engine uses your live values.</p>
+                        </div>
+                        <div class="crypto-indicator-badge">
+                            <span class="crypto-key-icon">🔐</span>
+                            <span>Algorithm: <strong>HMAC-SHA256</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="sim-input-grid mt-3">
+                        <div class="input-field-group">
+                            <label for="inputSenderIp" class="input-label">
+                                <span class="label-icon">💻</span> Sender IP Address <span class="req-star">*</span>
+                            </label>
+                            <input type="text" id="inputSenderIp" class="sim-text-input" value="192.168.1.10" placeholder="e.g. 192.168.1.10" autocomplete="off" spellcheck="false">
+                            <span class="field-hint">IPv4 format of originating host</span>
+                        </div>
+
+                        <div class="input-field-group">
+                            <label for="inputReceiverIp" class="input-label">
+                                <span class="label-icon">🖥️</span> Receiver IP Address <span class="req-star">*</span>
+                            </label>
+                            <input type="text" id="inputReceiverIp" class="sim-text-input" value="192.168.1.20" placeholder="e.g. 192.168.1.20" autocomplete="off" spellcheck="false">
+                            <span class="field-hint">IPv4 format of destination host</span>
+                        </div>
+
+                        <div class="input-field-group">
+                            <label for="inputSeqNum" class="input-label">
+                                <span class="label-icon">🔢</span> Sequence Number <span class="req-star">*</span>
+                            </label>
+                            <input type="number" id="inputSeqNum" class="sim-text-input" value="1001" min="1" step="1" placeholder="e.g. 1001">
+                            <span class="field-hint">Fresh positive integer (replay protection)</span>
+                        </div>
+
+                        <div class="input-field-group field-span-all">
+                            <label for="inputMessage" class="input-label">
+                                <span class="label-icon">✉️</span> Packet Message (Payload) <span class="req-star">*</span>
+                            </label>
+                            <input type="text" id="inputMessage" class="sim-text-input" value="Hello Receiver" placeholder="e.g. Hello Receiver / Transfer Rs.5000">
+                            <span class="field-hint">Data payload to be authenticated by HMAC</span>
+                        </div>
+                    </div>
+
+                    <!-- Input Validation Alert Message -->
+                    <div class="sim-alert-box" id="inputAlertBox" style="display: none;">
+                        <span class="alert-icon">⚠️</span>
+                        <span class="alert-msg" id="inputAlertMsg">Please fill in all required packet details.</span>
+                    </div>
+
+                    <!-- Simulation Control Buttons Toolbar -->
+                    <div class="sim-controls-toolbar mt-3">
+                        <button class="sim-btn btn-run-primary" id="btnRunSimulation" onclick="runUserSimulation('genuine')">
+                            ⚡ CREATE PACKET / RUN SIMULATION
+                        </button>
+                        <button class="sim-btn btn-attack" id="btnModAttack" onclick="runUserSimulation('modified')">
+                            ⚠️ PACKET MODIFICATION ATTACK
+                        </button>
+                        <button class="sim-btn btn-attack" id="btnSpoofAttack" onclick="runUserSimulation('spoofed')">
+                            🎭 IP SPOOFING ATTACK
+                        </button>
+                        <button class="sim-btn btn-attack" id="btnReplayAttack" onclick="runUserSimulation('replay')">
+                            🔄 REPLAY ATTACK
+                        </button>
+                        <button class="sim-btn btn-reset" id="btnReset" onclick="resetSimulation()">
+                            ↺ RESET SIMULATION
+                        </button>
+                    </div>
+
+                    <div class="sim-helper-note mt-2">
+                        <span class="note-bullet">ℹ️</span>
+                        <span><strong>Classroom Viva Tip:</strong> Enter your custom values above. Click <strong>CREATE PACKET / RUN SIMULATION</strong> to verify your authentic packet, or test any of the 3 attack vectors on your entered packet.</span>
+                    </div>
                 </div>
 
                 <!-- Live Network Visualization Arena -->
@@ -619,11 +679,11 @@
                 <!-- PROJECT TITLE & PURPOSE -->
                 <div class="cyber-card highlight-card">
                     <div class="card-caption">PROJECT TITLE</div>
-                    <h2 class="aim-statement" style="font-size: 1.45rem; font-weight: 700; color: #ffffff; margin-bottom: 1rem;">
-                        Anti-Spoofing Packet Verification
+                    <h2 class="aim-statement" style="font-size: 1.45rem; font-weight: 700; margin-bottom: 1rem;">
+                        Implementation of Anti-Spoofing Packet Verification
                     </h2>
                     <div class="card-caption">PURPOSE</div>
-                    <p style="font-size: 1.05rem; color: #ffffff; line-height: 1.6; font-weight: 500;">
+                    <p style="font-size: 1.05rem; line-height: 1.6; font-weight: 500;">
                         A system for verifying network packets and detecting spoofing-related attacks.
                     </p>
                 </div>
@@ -633,22 +693,22 @@
                     <div class="cyber-card">
                         <div class="card-caption">TECHNOLOGIES USED</div>
                         <ul class="cyber-bullet-list">
-                            <li><strong style="color: #ffffff;">Python</strong></li>
-                            <li><strong style="color: #ffffff;">Flask</strong></li>
-                            <li><strong style="color: #ffffff;">HMAC-SHA256</strong></li>
-                            <li><strong style="color: #ffffff;">HTML</strong></li>
-                            <li><strong style="color: #ffffff;">CSS</strong></li>
-                            <li><strong style="color: #ffffff;">JavaScript</strong></li>
+                            <li><strong>Python</strong></li>
+                            <li><strong>Flask</strong></li>
+                            <li><strong>HMAC-SHA256</strong></li>
+                            <li><strong>HTML</strong></li>
+                            <li><strong>CSS</strong></li>
+                            <li><strong>JavaScript</strong></li>
                         </ul>
                     </div>
 
                     <div class="cyber-card">
                         <div class="card-caption">MAIN SECURITY FEATURES</div>
                         <ul class="cyber-bullet-list">
-                            <li><span style="color: #ffffff;">HMAC-based packet verification</span></li>
-                            <li><span style="color: #ffffff;">Packet modification detection</span></li>
-                            <li><span style="color: #ffffff;">IP spoofing detection</span></li>
-                            <li><span style="color: #ffffff;">Replay attack detection using sequence numbers</span></li>
+                            <li><span>HMAC-based packet verification</span></li>
+                            <li><span>Packet modification detection</span></li>
+                            <li><span>IP spoofing detection</span></li>
+                            <li><span>Replay attack detection using sequence numbers</span></li>
                         </ul>
                     </div>
                 </div>
@@ -657,13 +717,13 @@
                 <div class="cyber-card mt-3">
                     <div class="card-caption">WORKING</div>
                     <ul class="cyber-bullet-list">
-                        <li><span style="color: #ffffff;">Sender creates the packet.</span></li>
-                        <li><span style="color: #ffffff;">A sequence number is assigned.</span></li>
-                        <li><span style="color: #ffffff;">HMAC-SHA256 is generated using the secret key and packet information.</span></li>
-                        <li><span style="color: #ffffff;">Receiver verifies the HMAC.</span></li>
-                        <li><span style="color: #ffffff;">Sequence number is checked for replay attacks.</span></li>
-                        <li><span style="color: #ffffff;">Genuine packets are accepted.</span></li>
-                        <li><span style="color: #ffffff;">Invalid or replayed packets are rejected.</span></li>
+                        <li><span>Sender creates the packet.</span></li>
+                        <li><span>A sequence number is assigned.</span></li>
+                        <li><span>HMAC-SHA256 is generated using the secret key and packet information.</span></li>
+                        <li><span>Receiver verifies the HMAC.</span></li>
+                        <li><span>Sequence number is checked for replay attacks.</span></li>
+                        <li><span>Genuine packets are accepted.</span></li>
+                        <li><span>Invalid or replayed packets are rejected.</span></li>
                     </ul>
                 </div>
 
@@ -722,7 +782,7 @@
                         <div class="meta-item-list">
                             <div class="meta-row">
                                 <span class="mr-label">Project:</span>
-                                <strong class="mr-val">Implement Anti-Spoofing Packet Verification</strong>
+                                <strong class="mr-val">Implementation of Anti-Spoofing Packet Verification</strong>
                             </div>
                             <div class="meta-row">
                                 <span class="mr-label">Subject:</span>

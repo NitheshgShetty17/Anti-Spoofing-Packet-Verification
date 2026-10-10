@@ -1,5 +1,5 @@
 /**
- * Anti-Spoofing Packet Verification Virtual Laboratory
+ * Implementation of Anti-Spoofing Packet Verification Virtual Laboratory
  * Academic Simulator Controller
  * Subject: Cryptography & Network Security
  */
@@ -9,6 +9,7 @@ const simState = {
     isRunning: false,
     hasAcceptedInitialGenuine: false,
     lastSequenceWatermark: 0,
+    lastAcceptedPacket: null,
     activeSection: 'overview'
 };
 
@@ -16,10 +17,11 @@ const simState = {
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initMobileDrawer();
+    initInputLiveSync();
 });
 
 /* ==========================================================================
-   Section Navigation (6 Core Sections)
+   Section Navigation (7 Core Sections)
    ========================================================================== */
 function initNavigation() {
     const navButtons = document.querySelectorAll('.menu-btn');
@@ -83,9 +85,135 @@ function initMobileDrawer() {
 }
 
 /* ==========================================================================
+   Live Device Track Synchronization
+   ========================================================================== */
+function initInputLiveSync() {
+    const srcInput = document.getElementById('inputSenderIp');
+    const destInput = document.getElementById('inputReceiverIp');
+
+    if (srcInput) {
+        srcInput.addEventListener('input', () => {
+            const dev = document.getElementById('deviceSender');
+            if (dev) {
+                const ipLabel = dev.querySelector('.device-ip');
+                if (ipLabel) ipLabel.textContent = srcInput.value.trim() || '192.168.1.10';
+            }
+            hideInputAlert();
+        });
+    }
+
+    if (destInput) {
+        destInput.addEventListener('input', () => {
+            const dev = document.getElementById('deviceReceiver');
+            if (dev) {
+                const ipLabel = dev.querySelector('.device-ip');
+                if (ipLabel) ipLabel.textContent = destInput.value.trim() || '192.168.1.20';
+            }
+            hideInputAlert();
+        });
+    }
+
+    const seqInput = document.getElementById('inputSeqNum');
+    if (seqInput) seqInput.addEventListener('input', hideInputAlert);
+
+    const msgInput = document.getElementById('inputMessage');
+    if (msgInput) msgInput.addEventListener('input', hideInputAlert);
+}
+
+function hideInputAlert() {
+    const alertBox = document.getElementById('inputAlertBox');
+    if (alertBox) alertBox.style.display = 'none';
+}
+
+/* ==========================================================================
+   Input Validation Helper
+   ========================================================================== */
+function isValidIPv4(ip) {
+    if (!ip || typeof ip !== 'string') return false;
+    const parts = ip.trim().split('.');
+    if (parts.length !== 4) return false;
+    return parts.every(part => {
+        if (!/^\d+$/.test(part)) return false;
+        const num = parseInt(part, 10);
+        return num >= 0 && num <= 255 && (part === '0' || !part.startsWith('0'));
+    });
+}
+
+function getAndValidateUserInputs() {
+    const srcInput = document.getElementById('inputSenderIp');
+    const destInput = document.getElementById('inputReceiverIp');
+    const seqInput = document.getElementById('inputSeqNum');
+    const msgInput = document.getElementById('inputMessage');
+    const alertBox = document.getElementById('inputAlertBox');
+    const alertMsg = document.getElementById('inputAlertMsg');
+
+    const src = srcInput ? srcInput.value.trim() : '';
+    const dest = destInput ? destInput.value.trim() : '';
+    const seqStr = seqInput ? seqInput.value.trim() : '';
+    const msg = msgInput ? msgInput.value.trim() : '';
+
+    // Clear previous input error borders
+    [srcInput, destInput, seqInput, msgInput].forEach(inp => {
+        if (inp) inp.classList.remove('input-field-error');
+    });
+
+    function showError(message, focusElement) {
+        if (alertBox && alertMsg) {
+            alertMsg.textContent = message;
+            alertBox.style.display = 'flex';
+        }
+        if (focusElement) {
+            focusElement.classList.add('input-field-error');
+            focusElement.focus();
+        }
+        return null;
+    }
+
+    // 1. Sender IP validation
+    if (!src) {
+        return showError('Please enter a Sender IP address (e.g. 192.168.1.10).', srcInput);
+    }
+    if (!isValidIPv4(src)) {
+        return showError(`"${src}" is not a valid IPv4 address. Please use standard format X.X.X.X (0-255).`, srcInput);
+    }
+
+    // 2. Receiver IP validation
+    if (!dest) {
+        return showError('Please enter a Receiver IP address (e.g. 192.168.1.20).', destInput);
+    }
+    if (!isValidIPv4(dest)) {
+        return showError(`"${dest}" is not a valid IPv4 address. Please use standard format X.X.X.X (0-255).`, destInput);
+    }
+
+    // 3. Sequence Number validation
+    if (!seqStr) {
+        return showError('Please enter a Sequence Number (e.g. 1001).', seqInput);
+    }
+    const seq = parseInt(seqStr, 10);
+    if (isNaN(seq) || seq <= 0) {
+        return showError('Sequence Number must be a positive integer greater than 0.', seqInput);
+    }
+
+    // 4. Message validation
+    if (!msg) {
+        return showError('Please enter a Message payload (e.g. Hello Receiver).', msgInput);
+    }
+
+    // Everything valid
+    if (alertBox) alertBox.style.display = 'none';
+    return { src, dest, seq, msg };
+}
+
+/* ==========================================================================
    Simulator Button Selection Manager
    ========================================================================== */
-const SIM_OPTION_BUTTON_IDS = ['btnGenuine', 'btnModAttack', 'btnSpoofAttack', 'btnReplayAttack'];
+const SIM_OPTION_BUTTON_IDS = [
+    'btnRunSimulation',
+    'btnGenuine',
+    'btnModAttack',
+    'btnSpoofAttack',
+    'btnReplayAttack'
+];
 
 function setSelectedSimulationButton(selectedId) {
     SIM_OPTION_BUTTON_IDS.forEach(id => {
@@ -110,55 +238,51 @@ function clearSelectedSimulationButtons() {
 }
 
 /* ==========================================================================
-   1. GENUINE PACKET SIMULATION
+   CORE UNIFIED SIMULATOR CONTROLLER (OPERATES ON LIVE USER INPUT)
    ========================================================================== */
-async function runGenuineSimulation() {
+async function runUserSimulation(scenarioType) {
     if (simState.isRunning) return;
-    setSelectedSimulationButton('btnGenuine');
+
+    // Validate user inputs before proceeding
+    const userInput = getAndValidateUserInputs();
+    if (!userInput) return;
+
+    const { src, dest, seq, msg } = userInput;
+
+    // Update button highlight
+    const btnMap = {
+        'genuine': 'btnRunSimulation',
+        'modified': 'btnModAttack',
+        'spoofed': 'btnSpoofAttack',
+        'replay': 'btnReplayAttack'
+    };
+    setSelectedSimulationButton(btnMap[scenarioType] || 'btnRunSimulation');
     simState.isRunning = true;
 
-    // Reset visual state before starting
-    resetVisualElementsOnly();
-    updateArenaMode('GENUINE PACKET TRANSMISSION', 'status-pass');
+    // Sync node device IP badges on track
+    const sDev = document.getElementById('deviceSender');
+    const rDev = document.getElementById('deviceReceiver');
+    if (sDev) {
+        const ipSpan = sDev.querySelector('.device-ip');
+        if (ipSpan) ipSpan.textContent = src;
+    }
+    if (rDev) {
+        const ipSpan = rDev.querySelector('.device-ip');
+        if (ipSpan) ipSpan.textContent = dest;
+    }
 
-    // 1. Configure Genuine Packet Data
-    const packet = {
-        src: '192.168.1.10',
-        dest: '192.168.1.20',
-        seq: 1001,
-        msg: 'Hello Receiver',
-        scenario: 'genuine'
-    };
-
-    // Calculate real HMAC from backend
     try {
-        const createRes = await fetch('/api/create_packet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(packet)
-        });
-        const created = await createRes.json();
-        packet.mac = created.mac;
-        packet.mac_preview = created.mac_preview;
-
-        // Display packet at sender and in Packet Information panel
-        setDeviceStatus('deviceSender', 'senderStatus', 'Transmitting Packet ➡️', true);
-        setDeviceStatus('deviceReceiver', 'receiverStatus', 'Listening', false);
-        updatePacketInfoPanel(packet, null);
-        updateTravelingPacketUI(packet, false);
-
-        // 2. Animate Packet Travelling SENDER -> NETWORK -> RECEIVER
-        await animatePacketTransit(false);
-
-        // 3. Receiver Verification Pipeline
-        setDeviceStatus('deviceReceiver', 'receiverStatus', 'Verifying Inbound Packet...', true);
-        await runVerificationPipeline(packet, 'genuine');
-
-        simState.hasAcceptedInitialGenuine = true;
-        simState.lastSequenceWatermark = 1001;
-
+        if (scenarioType === 'genuine') {
+            await executeGenuineScenario(src, dest, seq, msg);
+        } else if (scenarioType === 'modified') {
+            await executeModificationScenario(src, dest, seq, msg);
+        } else if (scenarioType === 'spoofed') {
+            await executeSpoofingScenario(src, dest, seq, msg);
+        } else if (scenarioType === 'replay') {
+            await executeReplayScenario(src, dest, seq, msg);
+        }
     } catch (err) {
-        console.error('Simulation error:', err);
+        console.error('Simulation execution error:', err);
         alert('Simulation error: ' + err.message);
     } finally {
         simState.isRunning = false;
@@ -167,104 +291,216 @@ async function runGenuineSimulation() {
     }
 }
 
+// Aliases for backwards compatibility with any existing calls
+function runGenuineSimulation() {
+    return runUserSimulation('genuine');
+}
+
+function runAttack(attackType) {
+    return runUserSimulation(attackType);
+}
+
 /* ==========================================================================
-   2. ATTACK SIMULATIONS (MODIFICATION, IP SPOOFING, REPLAY)
+   SCENARIO 1: GENUINE PACKET (AUTHENTIC TRANSMISSION)
    ========================================================================== */
-async function runAttack(attackType) {
-    if (simState.isRunning) return;
-    const attackBtnMap = {
-        'modified': 'btnModAttack',
-        'spoofed': 'btnSpoofAttack',
-        'replay': 'btnReplayAttack'
+async function executeGenuineScenario(src, dest, seq, msg) {
+    resetVisualElementsOnly();
+    updateArenaMode('GENUINE PACKET TRANSMISSION', 'status-pass');
+
+    // 1. Generate real HMAC using user's packet details on backend
+    const createRes = await fetch('/api/create_packet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ src, dest, seq, msg })
+    });
+    const created = await createRes.json();
+
+    const packet = {
+        src: created.src,
+        dest: created.dest,
+        seq: created.seq,
+        msg: created.msg,
+        mac: created.mac,
+        mac_preview: created.mac_preview,
+        scenario: 'genuine'
     };
-    if (attackBtnMap[attackType]) {
-        setSelectedSimulationButton(attackBtnMap[attackType]);
+
+    // 2. Display packet at sender and in Packet Information panel
+    setDeviceStatus('deviceSender', 'senderStatus', 'Transmitting Packet ➡️', true);
+    setDeviceStatus('deviceReceiver', 'receiverStatus', 'Listening', false);
+    updatePacketInfoPanel(packet, null);
+    updateTravelingPacketUI(packet, false);
+
+    // 3. Animate packet smoothly across the network track
+    await animatePacketTransit(false);
+
+    // 4. Receiver verifies the packet
+    setDeviceStatus('deviceReceiver', 'receiverStatus', 'Verifying Inbound Packet...', true);
+    await runVerificationPipeline(packet, 'genuine');
+
+    simState.hasAcceptedInitialGenuine = true;
+    simState.lastSequenceWatermark = seq;
+    simState.lastAcceptedPacket = { ...packet };
+}
+
+/* ==========================================================================
+   SCENARIO 2: PACKET MODIFICATION ATTACK
+   ========================================================================== */
+async function executeModificationScenario(src, dest, seq, msg) {
+    resetVisualElementsOnly();
+    updateArenaMode('ATTACK: PACKET MODIFICATION', 'status-fail');
+
+    // 1. Attacker intercepts genuine packet created from user input
+    const createRes = await fetch('/api/create_packet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ src, dest, seq, msg })
+    });
+    const legitimate = await createRes.json();
+
+    // Attacker modifies the message payload but keeps the original HMAC
+    const tamperedMsg = (msg === 'Hello Receiver')
+        ? 'Transfer Rs.50000 to attacker'
+        : `${msg} [MODIFIED: Rs.50000 transferred to attacker]`;
+
+    const packet = {
+        src: legitimate.src,
+        dest: legitimate.dest,
+        seq: legitimate.seq,
+        msg: tamperedMsg,
+        mac: legitimate.mac, // Original HMAC kept!
+        mac_preview: legitimate.mac_preview,
+        scenario: 'modified'
+    };
+
+    // 2. Setup attacker node and field highlight
+    showAttacker(`Attacker rewrites message: "${tamperedMsg}"`);
+    setDeviceStatus('deviceSender', 'senderStatus', 'Dispatched Packet', false);
+    updatePacketInfoPanel(packet, 'msg');
+    updateTravelingPacketUI(packet, true);
+
+    // 3. Animate transit through attacker node
+    await animatePacketTransit(true);
+
+    // 4. Receiver verification pipeline (tampering detected by HMAC mismatch)
+    setDeviceStatus('deviceReceiver', 'receiverStatus', 'Running Security Verification...', true);
+    await runVerificationPipeline(packet, 'modified');
+}
+
+/* ==========================================================================
+   SCENARIO 3: SOURCE IP SPOOFING ATTACK
+   ========================================================================== */
+async function executeSpoofingScenario(src, dest, seq, msg) {
+    resetVisualElementsOnly();
+    updateArenaMode('ATTACK: SOURCE IP SPOOFING', 'status-fail');
+
+    // 1. Generate legitimate HMAC for user's packet
+    const createRes = await fetch('/api/create_packet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ src, dest, seq, msg })
+    });
+    const legitimate = await createRes.json();
+
+    // Attacker forges the source IP to impersonate another machine
+    const spoofedSrc = (src === '10.0.0.99') ? '172.16.0.50' : '10.0.0.99';
+
+    const packet = {
+        src: spoofedSrc,
+        dest: legitimate.dest,
+        seq: legitimate.seq,
+        msg: legitimate.msg,
+        mac: legitimate.mac, // Original HMAC kept!
+        mac_preview: legitimate.mac_preview,
+        scenario: 'spoofed'
+    };
+
+    // 2. Setup attacker node and field highlight
+    showAttacker(`Attacker forges Source IP from ${src} to ${spoofedSrc}`);
+    setDeviceStatus('deviceSender', 'senderStatus', 'Dispatched Packet', false);
+    updatePacketInfoPanel(packet, 'src');
+    updateTravelingPacketUI(packet, true);
+
+    // 3. Animate transit through attacker node
+    await animatePacketTransit(true);
+
+    // 4. Receiver verification pipeline (spoofing detected by HMAC mismatch)
+    setDeviceStatus('deviceReceiver', 'receiverStatus', 'Running Security Verification...', true);
+    await runVerificationPipeline(packet, 'spoofed');
+}
+
+/* ==========================================================================
+   SCENARIO 4: REPLAY ATTACK (RESENDING PREVIOUS PACKET)
+   ========================================================================== */
+async function executeReplayScenario(src, dest, seq, msg) {
+    // Replay attack requires that genuine packet (with this seq) was accepted first!
+    if (!simState.hasAcceptedInitialGenuine || simState.lastSequenceWatermark !== seq) {
+        updateArenaMode('STEP 1: ESTABLISHING INITIAL GENUINE PACKET (Seq: ' + seq + ')', 'status-checking');
+        await executeSilentUserPacket(src, dest, seq, msg);
+        await delay(800);
     }
-    simState.isRunning = true;
 
-    try {
-        // Special requirement for Replay Attack:
-        // Must demonstrate that genuine packet (Seq: 1001) is accepted first!
-        if (attackType === 'replay' && !simState.hasAcceptedInitialGenuine) {
-            updateArenaMode('STEP 1: ESTABLISHING GENUINE PACKET FIRST', 'status-checking');
-            await executeSilentGenuinePacket();
-            await delay(800);
-        }
+    resetVisualElementsOnly();
+    updateArenaMode('STEP 2: ATTACKER REPLAYS CAPTURED PACKET (Seq: ' + seq + ')', 'status-fail');
 
-        resetVisualElementsOnly();
+    // The attacker captured the exact legitimate packet previously accepted
+    const replayedPacket = {
+        src: src,
+        dest: dest,
+        seq: seq, // Old sequence number already processed by receiver!
+        msg: msg,
+        mac: simState.lastAcceptedPacket ? simState.lastAcceptedPacket.mac : '',
+        mac_preview: simState.lastAcceptedPacket ? simState.lastAcceptedPacket.mac_preview : '',
+        scenario: 'replay'
+    };
 
-        // Fetch pre-configured scenario details from Flask backend
-        const res = await fetch(`/api/scenario/${attackType}`);
-        const scenarioData = await res.json();
-        const packet = scenarioData.packet;
+    // Attacker node notification
+    showAttacker(`Attacker captures & resends packet with old Sequence: ${seq}`);
+    setDeviceStatus('deviceSender', 'senderStatus', 'Dispatched Packet', false);
+    updatePacketInfoPanel(replayedPacket, 'seq');
+    updateTravelingPacketUI(replayedPacket, true);
 
-        // Setup UI for attack
-        if (attackType === 'modified') {
-            updateArenaMode('ATTACK: PACKET MODIFICATION', 'status-fail');
-            showAttacker('Attacker rewrites message: "Transfer Rs.50000 to attacker"');
-            highlightPacketField('fieldMsg');
-        } else if (attackType === 'spoofed') {
-            updateArenaMode('ATTACK: SOURCE IP SPOOFING', 'status-fail');
-            showAttacker('Attacker forges Source IP to: 10.0.0.99');
-            highlightPacketField('fieldSrc');
-        } else if (attackType === 'replay') {
-            updateArenaMode('ATTACK: REPLAY ATTACK (OLD PACKET RESENT)', 'status-fail');
-            showAttacker('Attacker resends captured packet (Seq: 1001)');
-            highlightPacketField('fieldSeq');
-        }
+    // Animate transit
+    await animatePacketTransit(true);
 
-        // Show packet at sender
-        setDeviceStatus('deviceSender', 'senderStatus', 'Dispatched Packet', false);
-        updatePacketInfoPanel(packet, scenarioData.highlight_field);
-        updateTravelingPacketUI(packet, true);
-
-        // Animate packet intercepted by Attacker then delivered to Receiver
-        await animatePacketTransit(true);
-
-        // Run Receiver Verification Pipeline
-        setDeviceStatus('deviceReceiver', 'receiverStatus', 'Running Security Verification...', true);
-        await runVerificationPipeline(packet, attackType);
-
-    } catch (err) {
-        console.error('Attack simulation error:', err);
-        alert('Attack simulation error: ' + err.message);
-    } finally {
-        simState.isRunning = false;
-        setDeviceStatus('deviceSender', 'senderStatus', 'Idle', false);
-        setDeviceStatus('deviceReceiver', 'receiverStatus', 'Listening', false);
-    }
+    // Receiver verification pipeline (replay detected because seq <= last_sequence)
+    setDeviceStatus('deviceReceiver', 'receiverStatus', 'Checking Replay Protection...', true);
+    await runVerificationPipeline(replayedPacket, 'replay');
 }
 
 /**
- * Silently runs genuine packet flow for Replay demonstration prerequisite
+ * Silently establishes genuine packet baseline with user values for Replay test
  */
-async function executeSilentGenuinePacket() {
-    const genuinePkt = {
-        src: '192.168.1.10',
-        dest: '192.168.1.20',
-        seq: 1001,
-        msg: 'Hello Receiver'
-    };
+async function executeSilentUserPacket(src, dest, seq, msg) {
     const cRes = await fetch('/api/create_packet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(genuinePkt)
+        body: JSON.stringify({ src, dest, seq, msg })
     });
     const created = await cRes.json();
-    genuinePkt.mac = created.mac;
-    genuinePkt.scenario = 'genuine';
+    const genuinePkt = {
+        src: created.src,
+        dest: created.dest,
+        seq: created.seq,
+        msg: created.msg,
+        mac: created.mac,
+        mac_preview: created.mac_preview,
+        scenario: 'genuine'
+    };
 
     updatePacketInfoPanel(genuinePkt, null);
     updateTravelingPacketUI(genuinePkt, false);
 
     await animatePacketTransit(false);
     await runVerificationPipeline(genuinePkt, 'genuine');
+
     simState.hasAcceptedInitialGenuine = true;
-    simState.lastSequenceWatermark = 1001;
+    simState.lastSequenceWatermark = seq;
+    simState.lastAcceptedPacket = { ...genuinePkt };
 }
 
 /* ==========================================================================
-   3. VERIFICATION PIPELINE (One-by-One Stage Display)
+   VERIFICATION PIPELINE (Sequential Stage Verification Display)
    ========================================================================== */
 async function runVerificationPipeline(packet, scenarioType) {
     const statusAuth = document.getElementById('statusAuth');
@@ -332,8 +568,11 @@ function renderFinalVerdict(result) {
         title.textContent = '✓ PACKET ACCEPTED';
         sub.textContent = 'Authentication: PASS  •  Integrity: PASS  •  Sequence Number: VALID';
         reasonBox.style.display = 'none';
-        document.getElementById('infoStatus').textContent = 'VERIFIED & ACCEPTED';
-        document.getElementById('infoStatus').style.color = '#10b981';
+        const infoStatus = document.getElementById('infoStatus');
+        if (infoStatus) {
+            infoStatus.textContent = 'VERIFIED & ACCEPTED';
+            infoStatus.style.color = '#15803d'; // Rich green
+        }
     } else {
         banner.className = 'verdict-banner rejected';
         title.textContent = '✗ PACKET REJECTED';
@@ -341,23 +580,26 @@ function renderFinalVerdict(result) {
         
         reasonBox.style.display = 'inline-block';
         reasonBox.textContent = `Reason: "${result.reason}"`;
-        document.getElementById('infoStatus').textContent = 'REJECTED';
-        document.getElementById('infoStatus').style.color = '#ffb000';
+        const infoStatus = document.getElementById('infoStatus');
+        if (infoStatus) {
+            infoStatus.textContent = 'REJECTED';
+            infoStatus.style.color = '#d97706'; // Amber/orange
+        }
     }
 }
 
 /* ==========================================================================
-   4. ANIMATION & PACKET VISUALIZATION
+   ANIMATION & PACKET VISUALIZATION
    ========================================================================== */
 function animatePacketTransit(isAttack) {
     return new Promise(resolve => {
         const tp = document.getElementById('travelingPacket');
         if (!tp) return resolve();
 
-        // Reset to Sender
+        // Reset to Sender position
         tp.style.transition = 'none';
         tp.style.left = '5%';
-        void tp.offsetWidth; // Force reflow
+        void tp.offsetWidth; // Force DOM reflow
 
         if (isAttack) {
             // SENDER -> ATTACKER
@@ -383,29 +625,46 @@ function animatePacketTransit(isAttack) {
 }
 
 function updateTravelingPacketUI(packet, isTampered) {
-    document.getElementById('tpSrc').textContent = packet.src;
-    document.getElementById('tpDest').textContent = packet.dest;
-    document.getElementById('tpSeq').textContent = packet.seq;
-    document.getElementById('tpMsg').textContent = packet.msg;
-    document.getElementById('tpHash').textContent = packet.mac_preview || 'Computed MAC';
+    const tpSrc = document.getElementById('tpSrc');
+    const tpDest = document.getElementById('tpDest');
+    const tpSeq = document.getElementById('tpSeq');
+    const tpMsg = document.getElementById('tpMsg');
+    const tpHash = document.getElementById('tpHash');
+
+    if (tpSrc) tpSrc.textContent = packet.src;
+    if (tpDest) tpDest.textContent = packet.dest;
+    if (tpSeq) tpSeq.textContent = packet.seq;
+    if (tpMsg) tpMsg.textContent = packet.msg;
+    if (tpHash) tpHash.textContent = packet.mac_preview || (packet.mac ? packet.mac.slice(0, 16) + '...' : 'Computed MAC');
 
     const tp = document.getElementById('travelingPacket');
-    tp.style.left = '5%';
-    if (isTampered) {
-        tp.classList.add('tampered');
-    } else {
-        tp.classList.remove('tampered');
+    if (tp) {
+        tp.style.left = '5%';
+        if (isTampered) {
+            tp.classList.add('tampered');
+        } else {
+            tp.classList.remove('tampered');
+        }
     }
 }
 
 function updatePacketInfoPanel(packet, highlightField) {
-    document.getElementById('infoSrc').textContent = packet.src;
-    document.getElementById('infoDest').textContent = packet.dest;
-    document.getElementById('infoSeq').textContent = packet.seq;
-    document.getElementById('infoMsg').textContent = packet.msg;
-    document.getElementById('infoVerif').textContent = packet.mac_preview || 'Generated via secret-key verification';
-    document.getElementById('infoStatus').textContent = 'In Transit';
-    document.getElementById('infoStatus').style.color = '#00f0ff';
+    const infoSrc = document.getElementById('infoSrc');
+    const infoDest = document.getElementById('infoDest');
+    const infoSeq = document.getElementById('infoSeq');
+    const infoMsg = document.getElementById('infoMsg');
+    const infoVerif = document.getElementById('infoVerif');
+    const infoStatus = document.getElementById('infoStatus');
+
+    if (infoSrc) infoSrc.textContent = packet.src;
+    if (infoDest) infoDest.textContent = packet.dest;
+    if (infoSeq) infoSeq.textContent = packet.seq;
+    if (infoMsg) infoMsg.textContent = packet.msg;
+    if (infoVerif) infoVerif.textContent = packet.mac_preview || (packet.mac ? packet.mac.slice(0, 16) + '...' + packet.mac.slice(-8) : 'Generated via secret-key verification');
+    if (infoStatus) {
+        infoStatus.textContent = 'In Transit';
+        infoStatus.style.color = '#0284c7'; // Blue accent
+    }
 
     // Clear previous field highlights
     clearPacketHighlights();
@@ -477,10 +736,14 @@ function resetVisualElementsOnly() {
 
     // Reset verdict banner
     const banner = document.getElementById('verdictBanner');
-    banner.className = 'verdict-banner';
-    document.getElementById('verdictTitle').textContent = 'Awaiting Simulation';
-    document.getElementById('verdictSub').textContent = 'Click "START GENUINE PACKET" or choose an attack scenario.';
-    document.getElementById('verdictReason').style.display = 'none';
+    if (banner) banner.className = 'verdict-banner';
+    const vTitle = document.getElementById('verdictTitle');
+    const vSub = document.getElementById('verdictSub');
+    const vReason = document.getElementById('verdictReason');
+
+    if (vTitle) vTitle.textContent = 'Awaiting Simulation';
+    if (vSub) vSub.textContent = 'Enter packet details above and click "CREATE PACKET / RUN SIMULATION" or choose an attack scenario.';
+    if (vReason) vReason.style.display = 'none';
 
     // Reset traveling packet position
     const tp = document.getElementById('travelingPacket');
@@ -492,7 +755,7 @@ function resetVisualElementsOnly() {
 }
 
 /* ==========================================================================
-   5. RESET SIMULATION (Complete State & Backend Reset)
+   RESET SIMULATION (Complete State & Backend Reset)
    ========================================================================== */
 async function resetSimulation() {
     try {
@@ -500,19 +763,40 @@ async function resetSimulation() {
         await fetch('/api/reset', { method: 'POST' });
         simState.hasAcceptedInitialGenuine = false;
         simState.lastSequenceWatermark = 0;
+        simState.lastAcceptedPacket = null;
         simState.isRunning = false;
 
         resetVisualElementsOnly();
+        hideInputAlert();
         updateArenaMode('SIMULATION RESET (READY)', 'status-waiting');
 
         // Reset info panel
-        document.getElementById('infoSrc').textContent = '192.168.1.10';
-        document.getElementById('infoDest').textContent = '192.168.1.20';
-        document.getElementById('infoSeq').textContent = '1001';
-        document.getElementById('infoMsg').textContent = 'Hello Receiver';
-        document.getElementById('infoVerif').textContent = 'Generated via secret-key verification';
-        document.getElementById('infoStatus').textContent = 'Awaiting Simulation';
-        document.getElementById('infoStatus').style.color = '#e2e8f0';
+        const infoSrc = document.getElementById('infoSrc');
+        const infoDest = document.getElementById('infoDest');
+        const infoSeq = document.getElementById('infoSeq');
+        const infoMsg = document.getElementById('infoMsg');
+        const infoVerif = document.getElementById('infoVerif');
+        const infoStatus = document.getElementById('infoStatus');
+
+        const srcInput = document.getElementById('inputSenderIp');
+        const destInput = document.getElementById('inputReceiverIp');
+        const seqInput = document.getElementById('inputSeqNum');
+        const msgInput = document.getElementById('inputMessage');
+
+        const curSrc = srcInput ? srcInput.value.trim() : '192.168.1.10';
+        const curDest = destInput ? destInput.value.trim() : '192.168.1.20';
+        const curSeq = seqInput ? seqInput.value.trim() : '1001';
+        const curMsg = msgInput ? msgInput.value.trim() : 'Hello Receiver';
+
+        if (infoSrc) infoSrc.textContent = curSrc;
+        if (infoDest) infoDest.textContent = curDest;
+        if (infoSeq) infoSeq.textContent = curSeq;
+        if (infoMsg) infoMsg.textContent = curMsg;
+        if (infoVerif) infoVerif.textContent = 'Generated via secret-key verification';
+        if (infoStatus) {
+            infoStatus.textContent = 'Awaiting Simulation';
+            infoStatus.style.color = '#000000';
+        }
 
         setDeviceStatus('deviceSender', 'senderStatus', 'Idle', false);
         setDeviceStatus('deviceReceiver', 'receiverStatus', 'Listening', false);
